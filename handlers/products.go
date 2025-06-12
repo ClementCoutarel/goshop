@@ -57,7 +57,7 @@ func (h *ProductHandler) GetById(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(product)
 	}
-	return
+
 }
 
 // Create creates a new product from the database

@@ -4,8 +4,8 @@ import (
 	"coutarel/goshop/models"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -17,30 +17,29 @@ type UserHandler struct {
 // Update updates a user information
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid id provided", http.StatusBadRequest)
+		return
+	}
+
 	var newUser models.User
-	err := json.NewDecoder(r.Body).Decode(&newUser)
+	err = json.NewDecoder(r.Body).Decode(&newUser)
 	if err != nil {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
 
-	rows, err := h.DB.Query("SELECT id,name,email FROM users WHERE id = ?", vars["id"])
+	var test int
+	err = h.DB.QueryRow("SELECT id FROM users WHERE id = ?;", id).Scan(&test)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer rows.Close()
-
-	var users []models.User
-	for rows.Next() {
-		var u models.User
-		rows.Scan(&u.Id, &u.Name)
-		users = append(users, u)
-	}
-
-	if len(users) == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		} else {
+			http.Error(w, "Unable to update the user", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	_, err = h.DB.Exec("UPDATE users SET name = ?, email= ?, password = ?,role = ? WHERE id = ?",
@@ -48,7 +47,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		newUser.Email,
 		newUser.Password,
 		newUser.Role,
-		vars["id"],
+		id,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,32 +63,28 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete deletes a user from the database
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	rows, err := h.DB.Query("SELECT id,name,email FROM users WHERE id = ?;", vars["id"])
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer rows.Close()
-
-	var users []models.User
-	for rows.Next() {
-		var u models.User
-		rows.Scan(&u.Id, &u.Name)
-		users = append(users, u)
-	}
-
-	if len(users) == 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Invalid ID provided", http.StatusBadRequest)
 		return
 	}
 
-	res, err := h.DB.Exec("DELETE FROM users WHERE id = ?", vars["id"])
+	res, err := h.DB.Exec("DELETE FROM users WHERE id = ?", id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Println(res)
+	result, err := res.RowsAffected()
+	if err != nil {
+		http.Error(w, "Unable to find the user affected", http.StatusInternalServerError)
+		return
+	}
+
+	if result == 0 {
+		http.Error(w, "UNable to find the user for deletion", http.StatusNotFound)
+		return
+	}
 
 	w.WriteHeader(204)
 }
@@ -103,67 +98,59 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.DB.Query("SELECT id,name,email FROM users WHERE name = ? OR email = ?", newUser.Name, newUser.Email)
+	var exists string
+	err = h.DB.QueryRow("SELECT name FROM users WHERE name = ? OR email = ?", newUser.Name, newUser.Email).Scan(&exists)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if err == sql.ErrNoRows {
+			res, err := h.DB.Exec("INSERT INTO users (name, email, password) VALUES(?,?,?);",
+				newUser.Name,
+				newUser.Email,
+				newUser.Password,
+				0)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			id, _ := res.LastInsertId()
+			newUser.Id = int(id)
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(newUser)
+			return
+		} else {
+			http.Error(w, "User already registered", http.StatusInternalServerError)
+			return
+		}
 	}
-	defer rows.Close()
-
-	var users []models.User
-	for rows.Next() {
-		var u models.User
-		rows.Scan(&u.Id, &u.Name)
-		users = append(users, u)
-	}
-
-	if len(users) > 0 {
-		http.Error(w, "User already exists", http.StatusBadRequest)
-		return
-	}
-
-	res, err := h.DB.Exec("INSERT INTO users (name, email, password) VALUES(?,?,?);",
-		newUser.Name,
-		newUser.Email,
-		newUser.Password,
-		0)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	id, _ := res.LastInsertId()
-	newUser.Id = int(id)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(newUser)
 
 }
 
 // GetById retreves all the users from the database
 func (h *UserHandler) GetById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	rows, err := h.DB.Query("SELECT id,name,email, role FROM users WHERE id = ?", vars["id"])
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer rows.Close()
-
-	var users []models.UserDTO
-	for rows.Next() {
-		var u models.UserDTO
-		rows.Scan(&u.Id, &u.Name, &u.Email, &u.Role)
-		users = append(users, u)
-	}
-
-	if len(users) <= 0 {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Invalid ID provided", http.StatusBadRequest)
 		return
 	}
 
-	json.NewEncoder(w).Encode(users)
+	var user models.UserDTO
+	err = h.DB.QueryRow("SELECT id, name, email, role FROM users WHERE id = ?", id).Scan(&user.Id, &user.Name, &user.Email, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
 }
 
 // GetAll retrieves all users from the database
@@ -178,7 +165,7 @@ func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	var users []models.UserDTO
 	for rows.Next() {
 		var u models.UserDTO
-		rows.Scan(&u.Id, &u.Name, &u.Email, *&u.Role)
+		rows.Scan(&u.Id, &u.Name, &u.Email, &u.Role)
 		users = append(users, u)
 	}
 
