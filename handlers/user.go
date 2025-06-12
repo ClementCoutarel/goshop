@@ -14,6 +14,12 @@ type UserHandler struct {
 	DB *sql.DB
 }
 
+func NewUserHandler(db *sql.DB) UserHandler {
+	return UserHandler{
+		DB: db,
+	}
+}
+
 // Update updates a user information
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

@@ -14,6 +14,12 @@ type ProductHandler struct {
 	DB *sql.DB
 }
 
+func NewProductHandler(db *sql.DB) ProductHandler {
+	return ProductHandler{
+		DB: db,
+	}
+}
+
 // GetAll retrieves all the products from the database
 func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.Query("SELECT id, name, description, price, quantity FROM products")
