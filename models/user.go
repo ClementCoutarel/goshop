@@ -15,7 +15,14 @@ type User struct {
 	Role     Role   `json:"role"`
 }
 
-type UserDTO struct {
+type UserCreateDTO struct {
+	Name     string `json:"name" validate:"required,max=50,min=2"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6,alphanum"`
+	Role     Role   `json:"role"`
+}
+
+type UserGetDTO struct {
 	Id    int    `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
