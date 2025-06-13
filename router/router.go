@@ -11,8 +11,12 @@ func NewRouter(r *mux.Router, db *sql.DB) {
 
 	userHandler := handlers.NewUserHandler(db)
 	productHandler := handlers.NewProductHandler(db)
+	authHandler := handlers.NewAuthHandler(db)
 
 	apiRoutes := r.PathPrefix("/api").Subrouter()
+
+	apiRoutes.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	apiRoutes.HandleFunc("/auth/signin", authHandler.Signin).Methods("POST")
 
 	apiRoutes.HandleFunc("/users/{id}", userHandler.Delete).Methods("DELETE")
 	apiRoutes.HandleFunc("/users/{id}", userHandler.Update).Methods("PATCH")

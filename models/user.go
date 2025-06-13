@@ -15,6 +15,11 @@ type User struct {
 	Role     Role   `json:"role"`
 }
 
+type UserToAuthDTO struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6,alphanum"`
+}
+
 type UserCreateDTO struct {
 	Name     string `json:"name" validate:"required,max=50,min=2"`
 	Email    string `json:"email" validate:"required,email"`
@@ -27,4 +32,12 @@ type UserGetDTO struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  Role   `json:"role"`
+}
+
+type LoggedUserDTO struct {
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  Role   `json:"role"`
+	Token string `json:"token"`
 }
