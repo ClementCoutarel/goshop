@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"coutarel/goshop/database"
 	"coutarel/goshop/models"
 	"database/sql"
 	"encoding/json"
@@ -11,12 +12,12 @@ import (
 )
 
 type ProductHandler struct {
-	DB *sql.DB
+	ProductService database.ProductService
 }
 
-func NewProductHandler(db *sql.DB) ProductHandler {
-	return ProductHandler{
-		DB: db,
+func NewProductHandler(ProductService database.ProductService) *ProductHandler {
+	return &ProductHandler{
+		ProductService: ProductService,
 	}
 }
 

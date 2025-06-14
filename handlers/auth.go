@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"coutarel/goshop/database"
 	"coutarel/goshop/models"
 	"database/sql"
 	"encoding/json"
@@ -10,12 +11,12 @@ import (
 )
 
 type AuthHandler struct {
-	DB *sql.DB
+	AuthService database.AuthService
 }
 
-func NewAuthHandler(db *sql.DB) AuthHandler {
+func NewAuthHandler(authService database.AuthService) AuthHandler {
 	return AuthHandler{
-		DB: db,
+		AuthService: authService,
 	}
 }
 

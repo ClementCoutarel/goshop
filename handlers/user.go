@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"coutarel/goshop/database"
 	"coutarel/goshop/models"
 	"database/sql"
 	"encoding/json"
@@ -13,12 +14,12 @@ import (
 )
 
 type UserHandler struct {
-	DB *sql.DB
+	UserService database.UserService
 }
 
-func NewUserHandler(db *sql.DB) UserHandler {
+func NewUserHandler(userService database.UserService) UserHandler {
 	return UserHandler{
-		DB: db,
+		UserService: userService,
 	}
 }
 
@@ -40,7 +41,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var existingUser int
 	var conflicts int
-	err = h.DB.QueryRow("SELECT (SELECT COUNT(*) FROM users WHERE id =?) as user_exists, (SELECT COUNT(*) FROM users WHERE (email = ? OR name = ?) AND id != ?) AS conflicts;",
+	err = h.UserService.QueryRow("SELECT (SELECT COUNT(*) FROM users WHERE id =?) as user_exists, (SELECT COUNT(*) FROM users WHERE (email = ? OR name = ?) AND id != ?) AS conflicts;",
 		id, newUser.Email, newUser.Name, id).Scan(&existingUser, &conflicts)
 	if err != nil {
 		http.Error(w, "Unable to update the user", http.StatusInternalServerError)
@@ -57,7 +58,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE users SET name = ?, email= ?, password = ?,role = ? WHERE id = ?",
+	_, err = h.UserService.Exec("UPDATE users SET name = ?, email= ?, password = ?,role = ? WHERE id = ?",
 		newUser.Name,
 		newUser.Email,
 		newUser.Password,

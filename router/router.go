@@ -1,17 +1,17 @@
 package router
 
 import (
+	"coutarel/goshop/database"
 	"coutarel/goshop/handlers"
-	"database/sql"
 
 	"github.com/gorilla/mux"
 )
 
-func NewRouter(r *mux.Router, db *sql.DB) {
+func NewRouter(r *mux.Router, userService *database.UserService, productService *database.ProductService, authService *database.AuthService) {
 
-	userHandler := handlers.NewUserHandler(db)
-	productHandler := handlers.NewProductHandler(db)
-	authHandler := handlers.NewAuthHandler(db)
+	userHandler := handlers.NewUserHandler(*userService)
+	productHandler := handlers.NewProductHandler(*productService)
+	authHandler := handlers.NewAuthHandler(*authService)
 
 	apiRoutes := r.PathPrefix("/api").Subrouter()
 

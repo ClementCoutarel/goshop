@@ -24,7 +24,15 @@ func main() {
 
 	r := mux.NewRouter()
 
-	router.NewRouter(r, db)
+	userRepo := &database.UserSQLRepo{DB: db}
+	productRepo := &database.ProductSQLRepo{DB: db}
+	authRepo := &database.AuthSQLRepo{DB: db}
+
+	userService := database.NewUserService(userRepo)
+	productService := database.NewProductService(productRepo)
+	authService := database.NewAuthService(authRepo)
+
+	router.NewRouter(r, userService, productService, authService)
 
 	server := &http.Server{
 		Handler: r,
